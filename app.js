@@ -4,9 +4,14 @@ var _ = require('underscore')
 var bodyParser = require('body-parser')
 var bcrypt = require('bcrypt')
 var db = require('./db')
+var middleware = require('./midlleware.js')(db)
 var PORT = process.env.PORT || 3000
 
 app.use(bodyParser.json())
+
+app.get('/user/home', middleware.requireAuthentication, function (req, res) {
+    res.send('home')
+})
 
 app.post('/user', function (req, res) {
     var body = _.pick(req.body, 'email', 'password')
@@ -27,23 +32,13 @@ app.post('/user/login', function (req, res) {
 
     db.user.authenticate(body).then(function (user) {
         var token = user.generateToken('authentication')
-
-        res.header('Auth', token).json(user.toPublicJSON())
+        res.json({
+            data: user.toPublicJSON(),
+            access_token: token
+        })
     }, function () {
         res.status(401).send()
     })
-
-    // db.user.findOne({
-    //     where: {'email': body.email}
-    // }).then(function (user) {
-    //     if(!user || !bcrypt.compareSync(body.password, user.get('password_hash'))){
-    //         return res.status(400).json({
-    //             message: 'Password miss matched.'
-    //         })
-    //     }
-    //
-    //     res.status(200).json(user.toPublicJSON())
-    // })
 })
 
 db.sequelize.sync({force: true}).then(function () {

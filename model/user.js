@@ -58,6 +58,26 @@ module.exports = function (sequelize, Datatypes) {
                         reject()
                     })
                 })
+            },
+            findByToken: function (token) {
+                return new Promise(function (resolve, reject) {
+                    try{
+                        var decodeJWT = jwt.verify(token, 'qwerty098')
+                        var bytes = cryptojs.AES.decrypt(decodeJWT.token, 'ggwp0281996')
+                        var tokenData = JSON.parse(bytes.toString(cryptojs.enc.Utf8))
+                        user.findById(tokenData.id).then(function (user) {
+                            if(!user){
+                                reject()
+                            }else{
+                                resolve()
+                            }
+                        }, function (e) {
+                            reject()
+                        })
+                    }catch (e){
+                        reject()
+                    }
+                })
             }
         },
         instanceMethods: {
@@ -66,15 +86,18 @@ module.exports = function (sequelize, Datatypes) {
                 return _.pick(json, 'id', 'email', 'createdAt', 'updatedAt')
             },
             generateToken: function (type) {
-                // if(!_.isString(type)){
-                //     return undefined
-                // }
-                console.log('type: ' + type)
+                if(typeof type !== 'string'){
+                    return undefined
+                }
+
                 try{
                     var stringData = JSON.stringify({id: this.get('id'), type: type})
                     var encryptedData = cryptojs.AES.encrypt(stringData, 'ggwp0281996').toString()
                     var token = jwt.sign({token: encryptedData}, 'qwerty098')
+
+                    return token
                 }catch (e){
+                    console.log('error' + e)
                     console.error(e)
                     return undefined
                 }
